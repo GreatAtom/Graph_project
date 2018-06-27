@@ -19,6 +19,8 @@ const int N_I = 10; // кол-во вершин в I подграфе
 const int N = G * N_I; // кол-во вершин в графе
 unsigned long* graphDeg = new unsigned long[N]; // массив степеней вершин
 unsigned long* counterDistances = new unsigned long[N - 1]; // массив кол-в путей между вершиными (i - длина пути)
+unsigned long* externConSubgr = new unsigned long[G]; // массив кол-ва внешних связий у подграфов
+unsigned long sumConSubgr = 0; // сумма кол-ва внешних связий у подграфов 
 unsigned long infDistance = 0; // бесконечные пути
 
 
@@ -88,7 +90,7 @@ void barAl(int subgrNum, int minConnectionCount, int maxConnectionCount) {
 	/*
 	 * modified model Barabási–Albert model
 	 *
-	 * subgrNum номер подграфа
+	 * subgrNum номер текущего подграфа
 	 * minConnectionCount минимальное кол-во связей у каждой новой вершины
 	 * maxConnectionCount максимальная степень вершины
 	*/
@@ -113,7 +115,8 @@ void barAl(int subgrNum, int minConnectionCount, int maxConnectionCount) {
 		vector<int> line;
 		line.reserve(N_I);
 
-		auto minCC = min(static_cast<int>(graph.size() - offset), minConnectionCount); // т.к. изначально нельзя присоединиться к больше вершинам, чем их всего в графе
+		// *(т.к. изначально нельзя присоединиться к больше вершинам, чем их всего в графе)
+		auto minCC = min(static_cast<int>(graph.size() - offset), minConnectionCount);
 
 		while (graphDeg[i] < minCC) // цикл перебора существующих вершин для дальнейшего не/присоединения
 		{
@@ -154,12 +157,11 @@ void erdosRenyi(int subgrNum, float p) {
 	/*
 	* classic model Erdős–Rényi model
 	*
-	* subgrNum номер подграфа
+	* subgrNum номер текущего подграфа
 	* p вероятность соединения
 	*/
 
 	auto offset = subgrNum * N_I; // номер вершины, с которой начинается текущий подграф 
-
 	p = p * 100;
 	for (auto i = 0; i < N_I; i++) // создаем вершины
 	{
@@ -184,6 +186,43 @@ void erdosRenyi(int subgrNum, float p) {
 	}
 }
 
+void subgraphConnectBarAl(int subgrNum, int connectionCount) {
+	/*
+	* modified model Barabási–Albert model
+	*
+	* subgrNum номер текущего подграфа
+	* connectionCount кол-во связей у текущего подграфа
+	*/
+
+	while (externConSubgr[subgrNum] < connectionCount) // цикл перебора существующих подгафов для дальнейшего не/присоединения
+	{
+		auto j = rand() % subgrNum; // выбираем случайный номер подграфа
+
+		// *(если sumConSubgr == 0 - это первый подграф, он соединится с 0 подграфом с вероятностью 1)
+		auto p = sumConSubgr > 0 ? externConSubgr[j] / static_cast<float>(sumConSubgr) : 1; // вероятность присоединения к j-му подгафу 
+		auto r = rand() / (static_cast<float>(RAND_MAX) + 1.0);
+
+		if (p > r) // соединяем текущий погграф с j подграфом
+		{
+			// новая связь соединяет вершину (?с максимальной степенью? ← это затем может быть изменено) G_i со случайной вершиной G_j;
+			// *(при равных степенях выбирается та вершина, которая первой достила этой степени)
+			auto v = j * N_I + rand() % N_I; // выбираем случайную вершину из подграфа G_j
+			auto offsetI = subgrNum * N_I;
+			// выбираем  вершину с максимальной степенью из подграфа G_i
+			auto numMaxDegI = distance(graphDeg, max_element(graphDeg + offsetI, graphDeg + offsetI + N_I));
+
+			// добавляем v к numMaxhDegInSubrg[subgrNum] и numMaxhDegInSubrg[subgrNum] к v вершинам в матрицу смежности
+			graph[numMaxDegI].push_back(v);
+			graph[v].push_back(numMaxDegI);
+			graphDeg[numMaxDegI]++;
+			graphDeg[v]++;
+			externConSubgr[j]++;
+			externConSubgr[subgrNum]++;
+			sumConSubgr += 1;
+		}
+	}
+}
+
 int main(int argc, char* argv[]) {
 	/*if(argc < 3)
 		exit(0);
@@ -197,6 +236,7 @@ int main(int argc, char* argv[]) {
 	graph.reserve(N);
 	fill_n(counterDistances, N, 0); // заполняем 0
 	fill_n(graphDeg, N, 0); // заполняем 0
+	fill_n(externConSubgr, G, 0); // заполняем 0
 
 	for (auto i = 0; i < G; i++) {
 		auto type = 1; // 1 - barAl, 2 - erdosRenyi
@@ -213,8 +253,10 @@ int main(int argc, char* argv[]) {
 
 			auto p = 0.1;
 			erdosRenyi(i, p);
-		} else {
-			exit(0);
+		}
+
+		if (i != 0) {
+			subgraphConnectBarAl(i, 1); // соединяем подграфы, если это ненулевой подграф
 		}
 
 		cout << "The " << i << " subgraph has been grown." << endl;
