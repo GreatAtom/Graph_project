@@ -7,50 +7,54 @@
 #include <list>
 #include <string>
 #include <chrono>
+#include <algorithm>
 
 #define INF 2 << 22
+#define uint  unsigned int
+#define ulong unsigned long
 
 using namespace std;
 
-vector<vector<int>> graph;
+vector<vector<uint>> graph;
 
-const int G = 3; // кол-во подграфов в графе
-const int N_I = 10; // кол-во вершин в I подграфе
-const int N = G * N_I; // кол-во вершин в графе
-unsigned long* graphDeg = new unsigned long[N]; // массив степеней вершин
-unsigned long* counterDistances = new unsigned long[N - 1]; // массив кол-в путей между вершиными (i - длина пути)
-unsigned long* externConSubgr = new unsigned long[G]; // массив кол-ва внешних связий у подграфов
-unsigned long sumConSubgr = 0; // сумма кол-ва внешних связий у подграфов 
-unsigned long infDistance = 0; // бесконечные пути
+const uint G = 3; // кол-во подграфов в графе
+uint* N_I = new uint [G]; // кол-во вершин в подграфах
+uint* offset = new uint [G]; // номера вершин, с которой начинаются подграфы
+ulong* graphDeg = nullptr; // массив степеней вершин
+ulong* counterDistances = nullptr; // массив кол-в путей между вершиными (i - длина пути)
+ulong* externConSubgr = new ulong[G]; // массив кол-ва внешних связий у подграфов
+ulong sumConSubgr = 0; // сумма кол-ва внешних связий у подграфов 
+ulong infDistance = 0; // бесконечные пути
 
 
-int findShortestPaths(int s) {
+uint findShortestPaths(uint s) {
 	/*
 	* поиск (в ширину) кратчайшего пути от вершины с номером s до остальных вершин
 	*
 	* s номер вершины, от которой производится поиск
 	*/
 
-	auto* dist = new int[N]; // массив длин путей до i-ой вершины
-	auto* parent = new int[N];
+	auto n = graph.size(); // кол-во вершин в графе
+	auto dist = new uint [n]; // массив длин путей до i-ой вершины
+	auto parent = new uint [n];
 
-	auto v = 0;
+	auto v = 0; // создание для omp
 #pragma omp parallel
 	{
 #pragma omp  for private(v) // изначально расстояния от вершины с номером s до остальных = INF
-		for (v = 0; v < N; ++v) {
+		for (v = 0; v < n; ++v) {
 			dist[v] = INF;
 			parent[v] = -1;
 		}
 	}
 
 	dist[s] = 0;
-	queue<int> Q;
+	queue<uint> Q;
 	Q.push(s);
 
 	while (!Q.empty()) // обход в ширину
 	{
-		int u = Q.front();
+		uint u = Q.front();
 		Q.pop();
 
 		for (auto it = graph[u].begin(); it != graph[u].end(); ++it) {
@@ -65,13 +69,13 @@ int findShortestPaths(int s) {
 #pragma omp parallel shared(counterDistances, infPath) 
 	{
 #pragma omp  for private(v) // перенос дистанций от вершины с номером s в общий массив или перем. infDistance (нету пути до вершины)
-		for (v = 0; v < N; ++v) {
+		for (v = 0; v < n; ++v) {
 			if (v > s) // фиксируем путь только от меньшей вершины к большей, чтобы не посчитать один путь дважды (например от 1 к 0 и от 0 к 1)
 			{
 				if (dist[v] != INF) {
 #pragma omp atomic	
 					counterDistances[dist[v]]++;
-					//printf("%d -> %d: %d\n", s, v, dist[v]);
+					//pruint f("%d -> %d: %d\n", s, v, dist[v]);
 				} else {
 #pragma omp atomic	
 					infDistance++;
@@ -86,7 +90,7 @@ int findShortestPaths(int s) {
 	return 0;
 }
 
-void barAl(int subgrNum, int minConnectionCount, int maxConnectionCount) {
+void barAl(uint subgrNum, uint minConnectionCount, uint maxConnectionCount) {
 	/*
 	 * modified model Barabási–Albert model
 	 *
@@ -95,34 +99,35 @@ void barAl(int subgrNum, int minConnectionCount, int maxConnectionCount) {
 	 * maxConnectionCount максимальная степень вершины
 	*/
 
-	auto offset = subgrNum * N_I; // номер вершины, с которой начинается текущий подграф 
+	auto n_i = N_I[subgrNum]; // кол-во вершин в I подграфе
+	auto offset_i = offset[subgrNum]; // номер вершины, с которой начинается текущий подграф 
 
 	/* создаём и соединяем первые 2 вершины (0 и 1) */
-	vector<int> line0;
-	line0.push_back(1 + offset);
+	vector<uint> line0;
+	line0.push_back(1 + offset_i);
 	graph.push_back(line0);
 	line0.pop_back();
-	line0.push_back(0 + offset);
+	line0.push_back(0 + offset_i);
 	graph.push_back(line0);
 
-	graphDeg[0 + offset] = 1; // степень 0 вершины
-	graphDeg[1 + offset] = 1; // степень 1 вершины
-	unsigned long sumDeg = 2; // суммарная степень в подграфе
+	graphDeg[0 + offset_i] = 1; // степень 0 вершины
+	graphDeg[1 + offset_i] = 1; // степень 1 вершины
+	ulong sumDeg = 2; // суммарная степень в подграфе
 
 	// create the adjacency list
-	for (auto i = 2 + offset; i < N_I + offset; i++) // цикл добавления новой (i-ой) вершины (-2, т.к. 2 вершины уже есть)
+	for (auto i = 2 + offset_i; i < n_i + offset_i; i++) // цикл добавления новой (i-ой) вершины (-2, т.к. 2 вершины уже есть)
 	{
-		vector<int> line;
-		line.reserve(N_I);
+		vector<uint> line;
+		line.reserve(n_i);
 
 		// *(т.к. изначально нельзя присоединиться к больше вершинам, чем их всего в графе)
-		auto minCC = min(static_cast<int>(graph.size() - offset), minConnectionCount);
+		auto minCC = min(graph.size() - offset_i, minConnectionCount);
 
 		while (graphDeg[i] < minCC) // цикл перебора существующих вершин для дальнейшего не/присоединения
 		{
-			auto j = offset + rand() % (graph.size() - offset); // выбираем случайную вершину
+			auto j = offset_i + rand() % (graph.size() - offset_i); // выбираем случайную вершину
 
-			bool alreadyInList = false;
+			auto alreadyInList = false;
 			for (auto k = 0; k < line.size(); k++) // проверка на отсутствие связи с этой вершиной
 			{
 				if (line[k] == j) {
@@ -153,7 +158,7 @@ void barAl(int subgrNum, int minConnectionCount, int maxConnectionCount) {
 	}
 }
 
-void erdosRenyi(int subgrNum, float p) {
+void erdosRenyi(uint subgrNum, float p) {
 	/*
 	* classic model Erdős–Rényi model
 	*
@@ -161,18 +166,20 @@ void erdosRenyi(int subgrNum, float p) {
 	* p вероятность соединения
 	*/
 
-	auto offset = subgrNum * N_I; // номер вершины, с которой начинается текущий подграф 
+	auto n_i = N_I[subgrNum]; // кол-во вершин в I подграфе
+	auto offset_i = offset[subgrNum]; // номер вершины, с которой начинается текущий подграф 
+
 	p = p * 100;
-	for (auto i = 0; i < N_I; i++) // создаем вершины
+	for (auto i = 0; i < n_i; i++) // создаем вершины
 	{
-		vector<int> line;
-		line.reserve(N_I);
+		vector<uint> line;
+		line.reserve(n_i);
 		graph.push_back(line);
 	}
 
 	// create the adjacency list
-	for (auto i = 0 + offset; i < N_I + offset; i++) {
-		for (auto j = i + 1; j < N_I + offset; j++) // соединяем вершины случайным образом (с учетом вероятности)
+	for (auto i = 0 + offset_i; i < n_i + offset_i; i++) {
+		for (auto j = i + 1; j < n_i + offset_i; j++) // соединяем вершины случайным образом (с учетом вероятности)
 		{
 			float r = rand() % 100;
 
@@ -186,7 +193,7 @@ void erdosRenyi(int subgrNum, float p) {
 	}
 }
 
-void subgraphConnectBarAl(int subgrNum, int connectionCount) {
+void subgraphConnectBarAl(uint subgrNum, uint connectionCount) {
 	/*
 	* modified model Barabási–Albert model
 	*
@@ -205,11 +212,10 @@ void subgraphConnectBarAl(int subgrNum, int connectionCount) {
 		if (p > r) // соединяем текущий погграф с j подграфом
 		{
 			// новая связь соединяет вершину (?с максимальной степенью? ← это затем может быть изменено) G_i со случайной вершиной G_j;
-			// *(при равных степенях выбирается та вершина, которая первой достила этой степени)
-			auto v = j * N_I + rand() % N_I; // выбираем случайную вершину из подграфа G_j
-			auto offsetI = subgrNum * N_I;
+			// *(при равных степенях выбирается первая найденная вершина)
+			auto v = offset[j] + rand() % N_I[j]; // выбираем случайную вершину из подграфа G_j
 			// выбираем  вершину с максимальной степенью из подграфа G_i
-			auto numMaxDegI = distance(graphDeg, max_element(graphDeg + offsetI, graphDeg + offsetI + N_I));
+			auto numMaxDegI = distance(graphDeg, max_element(graphDeg + offset[subgrNum], graphDeg + offset[subgrNum] + N_I[subgrNum]));
 
 			// добавляем v к numMaxhDegInSubrg[subgrNum] и numMaxhDegInSubrg[subgrNum] к v вершинам в матрицу смежности
 			graph[numMaxDegI].push_back(v);
@@ -231,11 +237,22 @@ int main(int argc, char* argv[]) {
 	auto type = atoi(argv[2]);*/
 
 	srand(time(nullptr));
+	auto n = 0; // кол-во вершин в графе
 
 	/* создание G подграфов */
-	graph.reserve(N);
-	fill_n(counterDistances, N, 0); // заполняем 0
-	fill_n(graphDeg, N, 0); // заполняем 0
+	for (auto i = 0; i < G; i++) {
+		auto n_i = 10 + rand() % 10; // кол-во вершин в I подграфе
+		N_I[i] = n_i; // кол-во вершин в I подграфе
+		offset[i] = n; // номер вершины, с которой начинается I подграф
+		n += n_i; // кол-во вершин в графе
+		cout << "n_i of " << i << " subgr is " << n_i << endl;
+	}
+
+	graphDeg = new ulong[n]; // массив степеней вершин
+	counterDistances = new ulong[n - 1]; // массив кол-в путей между вершиными (i - длина пути)
+	graph.reserve(n);
+	fill_n(counterDistances, n - 1, 0); // заполняем 0
+	fill_n(graphDeg, n, 0); // заполняем 0
 	fill_n(externConSubgr, G, 0); // заполняем 0
 
 	for (auto i = 0; i < G; i++) {
@@ -262,7 +279,7 @@ int main(int argc, char* argv[]) {
 		cout << "The " << i << " subgraph has been grown." << endl;
 	}
 
-	cout << "The model has been grown." << endl;
+	cout << endl << "The model has been grown." << endl;
 
 	/* запись графа в файл */
 	ofstream out("graph.txt");
@@ -274,16 +291,15 @@ int main(int argc, char* argv[]) {
 		out << endl;
 	}
 	out.close();
-	cout << "The model has been writen." << endl;
-
+	cout << "The model has been writen." << endl << endl;
 
 	/* чтение графа из файла */
-	string line;
+	/*string line;
 	ifstream in("graph.txt");
 	while (getline(in, line)) {
 		auto pos = line.find_first_of(" ");
 		line = line.substr(pos + 1);
-		vector<int> subLine;
+		vector<uint> subLine;
 		while ((pos = line.find_first_of(" ")) != string::npos) {
 			auto p = stoi(line.substr(0, pos));
 			subLine.push_back(p);
@@ -292,7 +308,7 @@ int main(int argc, char* argv[]) {
 		graph.push_back(subLine);
 	}
 	in.close();
-	cout << "The model has been read." << endl;
+	cout << "The model has been read." << endl << endl;*/
 
 	/* обход графа */
 	auto start = chrono::steady_clock::now();
@@ -300,7 +316,7 @@ int main(int argc, char* argv[]) {
 #pragma omp parallel shared(counterDistances, infPath)
 	{
 #pragma omp  for private(i)
-		for (i = 0; i < N_I - 1; i++) // -1, с. м. функцию обхода графа (например от 1 к 0 и от 0 к 1)
+		for (i = 0; i < graph.size() - 1; i++) // -1, с. м. функцию обхода графа (например от 1 к 0 и от 0 к 1)
 			findShortestPaths(i);
 		auto duration = chrono::duration_cast<chrono::minutes>(chrono::steady_clock::now() - start);
 		cout << duration.count() << endl;
@@ -308,7 +324,7 @@ int main(int argc, char* argv[]) {
 
 	/* запись распределения путей от кол-ва в файл */
 	out.open("graph_ch.txt");
-	for (i = 1; i < N_I; i++) {
+	for (i = 1; i < n - 1; i++) {
 		if (counterDistances[i] > 0)
 			out << i << " " << counterDistances[i] << endl;
 	}
@@ -316,8 +332,11 @@ int main(int argc, char* argv[]) {
 	out.close();
 	cout << "The paths have been found." << endl;
 
-	delete[] counterDistances;
+	delete[] N_I;
+	delete[] offset;
+	delete[] externConSubgr;
 	delete[] graphDeg;
+	delete[] counterDistances;
 
 	return 0;
 }
