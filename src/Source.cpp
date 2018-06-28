@@ -1,5 +1,6 @@
 ﻿#include <cstdio>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <vector>
 #include <queue>
@@ -321,6 +322,48 @@ int main(int argc, char* argv[]) {
 		auto duration = chrono::duration_cast<chrono::minutes>(chrono::steady_clock::now() - start);
 		cout << duration.count() << endl;
 	}
+	
+	
+#define CALC_MOMENTS        
+#ifdef CALC_MOMENTS        
+	// Расчёт характеристик распределения
+	
+	// Максимальная длина
+        int max_exists_len = 0;
+        for (i = 1; i < n - 1; i++) 
+        {
+          if (counterDistances[i] > 0)
+            max_exists_len = i;
+        }
+        //cout << "max_exists_len = " << max_exists_len << endl;
+        
+	// Среднее
+        int lencount = 0;
+        double sumlen = 0;
+        for (i = 1; i <= max_exists_len; i++) 
+        {
+          lencount += counterDistances[i];
+          sumlen   += counterDistances[i] * i;
+        }        
+        double zmean = sumlen/lencount;
+                
+        // Центральные моменты
+        double centersum2 = 0;
+        double centersum3 = 0;
+        double centersum4 = 0;
+        for (i = 1; i <= max_exists_len; i++) 
+        {
+          double i_centered = i - zmean;
+          
+          centersum2 += counterDistances[i] * i_centered * i_centered;
+          centersum3 += counterDistances[i] * i_centered * i_centered * i_centered;
+          centersum4 += counterDistances[i] * i_centered * i_centered * i_centered * i_centered;
+        }                
+        double zstd = sqrt(   centersum2 / (lencount - 1)   );
+        double zskewness = centersum3 / (lencount * zstd*zstd*zstd );
+        double zkurtosis = centersum4 / (lencount * zstd*zstd*zstd*zstd ) - 3;
+#endif        
+        	
 
 	/* запись распределения путей от кол-ва в файл */
 	out.open("graph_ch.txt");
@@ -329,9 +372,15 @@ int main(int argc, char* argv[]) {
 			out << i << " " << counterDistances[i] << endl;
 	}
 	out << "infPath " << infDistance;
+#ifdef CALC_MOMENTS        
+        out << setprecision(2) << endl << endl << "mean = " << zmean << "\tstd = " << zstd << "\tskewness = " << zskewness << "\tkurtosis-3 = " << zkurtosis << endl;
+#endif        
 	out.close();
 	cout << "The paths have been found." << endl;
 
+#ifdef CALC_MOMENTS        
+        cout << setprecision(2) << "mean = " << zmean << "\tstd = " << zstd << "\tskewness = " << zskewness << "\tkurtosis-3 = " << zkurtosis << endl;
+#endif   
 	delete[] N_I;
 	delete[] offset;
 	delete[] externConSubgr;
