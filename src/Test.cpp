@@ -24,8 +24,8 @@ const uint G = 30; // кол-во подграфов в графе
 ulong* sumDeg = new ulong[G]; // суммарная степень вершин в подграфах
 ulong* graphDeg = new ulong[N]; // массив степеней вершин
 ulong* counterDistances = new ulong[N - 1]; // массив кол-в путей между вершиными (i - длина пути)
-//ulong* externConSubgr = new ulong[G]; // массив кол-ва внешних связий у подграфов
-//ulong sumConSubgr = 0; // сумма кол-ва внешних связий у подграфов 
+ulong* externConSubgr = new ulong[G]; // массив кол-ва внешних связий у подграфов
+ulong sumConSubgr = 0; // сумма кол-ва внешних связий у подграфов 
 ulong infDistance = 0; // бесконечные пути
 
 
@@ -103,7 +103,7 @@ void barAlTest(uint minConnectionCount, uint maxConnectionCount) {
 	*/
 
 	/* create the adjacency list */
-	for (auto i = 0; i < N - G * 2; i++) // цикл добавления новой (i-ой) вершины (- G * 2 -> уже созданы)
+	for (auto i = G * 2; i < N; i++) // цикл добавления новой (i-ой) вершины (- G * 2 -> уже созданы)
 	{
 		while (true) // цикл перебора существующих подгафов для дальнейшего не/присоединения
 		{
@@ -138,7 +138,7 @@ void barAlTest(uint minConnectionCount, uint maxConnectionCount) {
 						continue;
 					}
 
-					p = graphDeg[j] / static_cast<float>(sumDeg[j]); // вероятность присоединения к j-ой вершине
+					p = graphDeg[j] / static_cast<float>(sumDeg[s]); // вероятность присоединения к j-ой вершине
 					r = rand() / (static_cast<float>(RAND_MAX) + 1.0);
 
 					if (p > r) // добавляем вершину
@@ -148,13 +148,57 @@ void barAlTest(uint minConnectionCount, uint maxConnectionCount) {
 						graph[j].push_back(i);
 						graphDeg[j]++;
 						graphDeg[i]++;
-						sumDeg[j] += 2;
+						sumDeg[s] += 2;
 					}
 				}
 				graph.push_back(line);
 				subGraph[s].push_back(i); // бросаем текущую вершину в s подграф
 				break;
 			}
+		}
+	}
+}
+
+void subgraphConnectBarAl(uint subgrNum, uint connectionCount) {
+	/*
+	* modified model Barabási–Albert model
+	*
+	* subgrNum номер текущего подграфа
+	* connectionCount кол-во связей у текущего подграфа
+	*/
+
+	while (externConSubgr[subgrNum] < connectionCount) // цикл перебора существующих подгафов для дальнейшего не/присоединения
+	{
+		auto j = rand() % subgrNum; // выбираем случайный номер подграфа
+
+		// *(если sumConSubgr == 0 или externConSubgr[j] == 0  subgrNum подграф соединится с j подграфом с вероятностью 1)
+		auto p = sumConSubgr > 0 || externConSubgr[j] == 0 ? externConSubgr[j] / static_cast<float>(sumConSubgr) : 1.; // вероятность присоединения к j-му подгафу 
+		auto r = rand() / (static_cast<float>(RAND_MAX) + 1.0);
+
+		if (p > r) // соединяем текущий погграф с j подграфом
+		{
+			// новая связь соединяет вершину (?с максимальной степенью? ← это затем может быть изменено) G_i со случайной вершиной G_j;
+			// *(при равных степенях выбирается первая найденная вершина)
+			auto pos = rand() % subGraph[j].size(); // выбираем случайную вершину в G_j подграфе
+			auto v = subGraph[j][pos]; // выбираем случайную вершину в s подграфе
+			// выбираем  вершину с максимальной степенью из подграфа G_i
+			auto maxDeg = 0, posMaxDeg = 0;
+			for (auto i = 0; i < subGraph[subgrNum].size(); i++) {
+				auto deg = graph[subgrNum][subGraph[subgrNum][i]];
+				if (deg > maxDeg) {
+					maxDeg = deg;
+					posMaxDeg = subGraph[subgrNum][i];
+				}
+			}
+
+			// добавляем v к numMaxhDegInSubrg[subgrNum] и numMaxhDegInSubrg[subgrNum] к v вершинам в матрицу смежности
+			graph[posMaxDeg].push_back(v);
+			graph[v].push_back(posMaxDeg);
+			graphDeg[posMaxDeg]++;
+			graphDeg[v]++;
+			externConSubgr[j]++;
+			externConSubgr[subgrNum]++;
+			sumConSubgr += 1;
 		}
 	}
 }
@@ -172,7 +216,7 @@ int main(int argc, char* argv[]) {
 
 	/* создание G подграфов */
 	subGraph.reserve(G);
-	for (auto i = 0; i < G; i++) {
+	for (auto i = 0; i < G * 2; i += 2) {
 		vector<uint> line;
 		line.push_back(i + 1);
 		graph.push_back(line);
@@ -182,7 +226,7 @@ int main(int argc, char* argv[]) {
 
 		graphDeg[i] = 1; // степень i вершины
 		graphDeg[i + 1] = 1; // степень i+1 вершины
-		sumDeg[i] = 2; // суммарная степень в подграфе
+		sumDeg[i / 2] = 2; // суммарная степень в подграфе
 
 		line.pop_back();
 		line.push_back(i); // по 2 вершины в подграфах (i)
@@ -194,6 +238,9 @@ int main(int argc, char* argv[]) {
 	auto minConnectionCount = 2;
 	auto maxConnectionCount = 32;
 	barAlTest(minConnectionCount, maxConnectionCount);
+	for (auto i = 1; i < G; i++) {
+		subgraphConnectBarAl(i, 1); // соединяем подграфы, если это ненулевой подграф
+	}
 	cout << "The model has been grown." << endl;
 
 	/* запись графа в файл */
@@ -237,7 +284,6 @@ int main(int argc, char* argv[]) {
 		cout << duration.count() << endl;
 	}
 
-
 #define CALC_MOMENTS        
 #ifdef CALC_MOMENTS        
 	// Расчёт характеристик распределения
@@ -275,7 +321,6 @@ int main(int argc, char* argv[]) {
 	double zkurtosis = centersum4 / (lencount * zstd * zstd * zstd * zstd) - 3;
 #endif        
 
-
 	/* запись распределения путей от кол-ва в файл */
 	out.open("graph_ch.txt");
 	for (i = 1; i < N - 1; i++) {
@@ -293,10 +338,10 @@ int main(int argc, char* argv[]) {
 	cout << setprecision(2) << "mean = " << zmean << "\tstd = " << zstd << "\tskewness = " << zskewness << "\tkurtosis-3 = " << zkurtosis << endl;
 #endif   
 
-	//delete[] externConSubgr;
-	delete[]sumDeg;
+	delete[] sumDeg;
 	delete[] graphDeg;
 	delete[] counterDistances;
+	delete[] externConSubgr;
 
 	return 0;
 }
