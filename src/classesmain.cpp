@@ -134,6 +134,7 @@ uint findShortestPathsToEndNodes(uint s, unordered_set<TVertexNumber> endNodes) 
 			//if (v > s) // фиксируем путь только от меньшей вершины к большей, чтобы не посчитать один путь дважды (например от 1 к 0 и от 0 к 1)
 			if (endNodes.count(v) > 0)
 			{
+				//cout << v << " ";
 				if (dist[v] != INF) {
 #pragma omp atomic	
 					counterDistances[dist[v]]++;
@@ -235,16 +236,13 @@ int main(int argc, char* argv[]) {
 if (NodesCount > EndNodesCount)
 {
 	
-	fill_n(counterDistances, n - 1, 0); // заполняем 0
-	infDistance = 0;
 	//out.open("graph_ch.txt", ios_base::ate);
 
 	for (k = 0; k < 3; ++k)
 	{
-		//for (i = 0; i < graph.size() - 1; i++) // -1, с. м. функцию обхода графа (например от 1 к 0 и от 0 к 1)
-		//i = rand()  % graph.size();
-		
-		
+		fill_n(counterDistances, n - 1, 0); // заполняем 0
+		infDistance = 0;
+				
 		// Множество оконечных узлов
 		unordered_set<TVertexNumber> endNodes;
 		
@@ -262,12 +260,12 @@ if (NodesCount > EndNodesCount)
 		}
 		while( endNodes.count(i) > 0 );
 		
-		findShortestPaths(i);
+		findShortestPathsToEndNodes(i, endNodes);
 		
 	
 		// Расчёт характеристик распределения
 		props.calcProperties(counterDistances, n);
-		cout << endl << "root " << i << endl;
+		cout << endl << "root " << i << " endnodes " << endNodes.size() << endl;
 		props.printHist(cout);
 		cout << "infPath = " << infDistance << " ";
 		props.printMoments(cout);

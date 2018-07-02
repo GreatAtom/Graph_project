@@ -10,9 +10,9 @@ using namespace std;
 
 typedef unsigned int TVertexNumber; // было int
 
-const int NodesCount = 1e5;
+// const int NodesCount = 1e5;
 // const int NodesCount = 1e4;
-// const int NodesCount = 1e3;
+const int NodesCount = 1e3;
 // const int NodesCount = 3e2;
 // const int NodesCount = 12;
 
@@ -49,7 +49,7 @@ const int hist_width = 30;
 const int hist_height = 16;
 
 // Размер выборки оконечных узлов для частичного распределения
-const int EndNodesCount = 550; // как для измерений
+const int EndNodesCount = 550; // как для измерений (малые выборки)
 
 class distProperties
 {
