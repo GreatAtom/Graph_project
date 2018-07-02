@@ -10,9 +10,9 @@ using namespace std;
 
 typedef unsigned int TVertexNumber; // было int
 
-// const int NodesCount = 1e5;
+const int NodesCount = 1e5;
 // const int NodesCount = 1e4;
-const int NodesCount = 1e3;
+// const int NodesCount = 1e3;
 // const int NodesCount = 3e2;
 // const int NodesCount = 12;
 
@@ -55,7 +55,7 @@ class distProperties
 {
 protected:
 	int max_exists_len;
-	int lencount; 
+	double lencount; 
 	double zmean;
 	double zstd;
 	double zskewness;

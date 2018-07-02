@@ -149,12 +149,14 @@ public:
 	int rouletteInvSelect() const
 	{
 		int imax = nodesDeg.size();
+		
+		const double scale = nodesCount() * 0.5;
 
 		double rouletteMax = 0;
 		for(int i = 0; i < imax; ++i)
 		{
 			if (nodesDeg[i] > 0)
-				rouletteMax += 100.0/nodesDeg[i];
+				rouletteMax += scale/nodesDeg[i];
   
 		}   		
 		
@@ -165,7 +167,7 @@ public:
 		{
 			if (nodesDeg[i] > 0)
 			{
-				rouletteSector += 100.0/nodesDeg[i];
+				rouletteSector += scale/nodesDeg[i];
 				if (rouletteValue < rouletteSector)
 				{
 					while (nodesDeg[i] <= 0)
@@ -244,6 +246,8 @@ public:
 	
 }; // TGrowingNetworkBA
 
+
+
 // typedef TGrowingNetwork TGrowingNetworkBA;
 
 class TGrowingNetworkLeafs: public TGrowingNetwork
@@ -283,11 +287,14 @@ class TNetworkWithDelete: public
 TGrowingNetworkBA
 // TGrowingNetworkLeafs
 {
+	vector<TVertexNumber> deadNodes;
+
+
 public:
 	virtual const char* title()
 	{
 		return "del";
-	}	vector<TVertexNumber> deadNodes;
+	}
 	
 protected:	
 	// Удаление узла
