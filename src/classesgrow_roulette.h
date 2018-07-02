@@ -1,6 +1,6 @@
 #include "common.h"
 
-// template<int minConnectionCount, int maxConnectionCount>
+// Растущая сеть
 class TGrowingNetwork
 {
 protected:
@@ -45,9 +45,9 @@ protected:
 		return j;
 	}
 	
-	virtual void doAfterAddNode(int i)
-	{
-	}
+	//virtual void doAfterAddNode(int i)
+	//{
+	//}
 	
 	
 public:
@@ -145,6 +145,7 @@ public:
 		return imax-1; // а сюда мы не дойдём
 	} // rouletteSelect  
 	
+	// Обратный выбор — чем меньше степень, тем больше вероятность ********
 	int rouletteInvSelect() const
 	{
 		int imax = nodesDeg.size();
@@ -156,7 +157,6 @@ public:
 				rouletteMax += 100.0/nodesDeg[i];
   
 		}   		
-		
 		
 		double rouletteValue = rand() * rouletteMax / (RAND_MAX + 1.0);
 		
@@ -177,6 +177,11 @@ public:
 		return imax-1; // а сюда мы не дойдём
 	} // rouletteInvSelect  	
 	
+	// Выбор оконечного узла (пользователя, поэтому, вероятно, с минимальной степенью)
+	virtual int selectEndNode() const
+	{
+		return rouletteInvSelect();
+	}
 
 
 	// Добавление вершины к графу *****************************************
@@ -208,7 +213,7 @@ public:
 			++sumDeg;
 		}		
 		//cout << " /addNode " << i;
-		doAfterAddNode(i);
+		//doAfterAddNode(i);
 	}
 	
 	// Рост графа
@@ -420,6 +425,7 @@ public:
 
 // typedef TGrowingNetworkBA TSolidGraph;
 
+// Подграф как элемент составного графа
 class TSolidGraph: public TGrowingNetworkBA
 {
 protected:
@@ -464,7 +470,9 @@ public:
       farVertex = fv;
     }
   };
-  
+private:
+	vector<vector<TVertexNumber>> *pexportedGraph;
+	
 protected:
   vector<TSolidGraph> subGraphs;
   int totalVerticesCount;
@@ -475,6 +483,7 @@ public:
   TCombinedGraph()
   {
     totalVerticesCount = 0;
+    pexportedGraph = NULL;
   }
   
   // Общее число вершин во всех подграфах *************************************
@@ -648,7 +657,7 @@ public:
   
   
   // Упаковка выращенного графа в массив для расчёта длин *********************
-  int exportToPlain(vector<vector<TVertexNumber>> &graph) const
+  int exportToPlain(vector<vector<TVertexNumber>> &graph) 
   {
     int graphsCount = subGrapsCount(), g = 0;
     int currentSubGraphShift = 0;    
@@ -695,6 +704,49 @@ public:
     
     }; // цикл по подграфам     
     
-  }
+    pexportedGraph = &graph;
+    
+  } // упаковка
+  
+	
+	// Выбор оконечного узла (пользователя, поэтому, вероятно, с минимальной степенью)
+	virtual int selectEndNode() const
+	{
+		if (!pexportedGraph)
+		{
+			cout << "call exportToPlain()!!!" << endl;
+			return rand() % totalVerticesCount;
+		}
+		
+		int imax = pexportedGraph->size();
+
+		double rouletteMax = 0;
+		for(int i = 0; i < imax; ++i)
+		{
+			auto ideg = (*pexportedGraph)[i].size();
+			if (ideg > 0)
+				rouletteMax += 100.0/ideg;
+  
+		}   		
+		
+		double rouletteValue = rand() * rouletteMax / (RAND_MAX + 1.0);
+		
+		int rouletteSector = 0;
+		for(int i = 0; i < imax; ++i)
+		{
+			auto ideg = (*pexportedGraph)[i].size();
+			if (ideg > 0)
+			{
+				rouletteSector += 100.0/ideg;
+				if (rouletteValue < rouletteSector)
+				{
+					return i;
+				}      
+			}
+		}    
+		return imax-1; // а сюда мы не дойдём	
+		
+	}
+
 
 }; //TCombinedGraph

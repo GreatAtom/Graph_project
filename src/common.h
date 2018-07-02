@@ -32,19 +32,24 @@ const double pDel = 0.4;
 class TGrowingNetworkBA;
 class TGrowingNetworkLeafs; // присоединение по обратному правилу в ?50% случаев
 class TNetworkWithDelete;
-class TCombinedGraph;
+class TCombinedGraph;	// составной граф из графов
 
 typedef TGrowingNetworkBA TCurrentModel;
 
 
 
-#define CALC_MOMENTS  
+
+
 #define ROOT_TARGET
 
-	// Расчёт характеристик распределения
-	const int hist_width = 30;
-	const int hist_height = 16;
+// Расчёт характеристик распределения *****************************************
 
+// Размер гистограммы
+const int hist_width = 30;
+const int hist_height = 16;
+
+// Размер выборки оконечных узлов для частичного распределения
+const int EndNodesCount = 550; // как для измерений
 
 class distProperties
 {
