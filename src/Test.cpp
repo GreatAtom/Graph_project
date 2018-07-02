@@ -172,7 +172,7 @@ void subgraphConnectBarAl(uint subgrNum, uint connectionCount) {
 		auto j = rand() % subgrNum; // выбираем случайный номер подграфа
 
 		// *(если sumConSubgr == 0 или externConSubgr[j] == 0  subgrNum подграф соединится с j подграфом с вероятностью 1)
-		auto p = sumConSubgr > 0 || externConSubgr[j] == 0 ? externConSubgr[j] / static_cast<float>(sumConSubgr) : 1.; // вероятность присоединения к j-му подгафу 
+		auto p = sumConSubgr > 0 || externConSubgr[j] != 0 ? externConSubgr[j] / static_cast<float>(sumConSubgr) : 1.; // вероятность присоединения к j-му подгафу 
 		auto r = rand() / (static_cast<float>(RAND_MAX) + 1.0);
 
 		if (p > r) // соединяем текущий погграф с j подграфом
@@ -212,7 +212,7 @@ int main(int argc, char* argv[]) {
 	fill_n(sumDeg, G, 0); // заполняем 0
 	fill_n(graphDeg, N, 0); // заполняем 0
 	fill_n(counterDistances, N - 1, 0); // заполняем 0	
-	//fill_n(externConSubgr, G, 0); // заполняем 0	
+	fill_n(externConSubgr, G, 0); // заполняем 0	
 
 	/* создание G подграфов */
 	subGraph.reserve(G);
