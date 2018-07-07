@@ -10,9 +10,10 @@ using namespace std;
 
 typedef unsigned int TVertexNumber; // было int
 
+// const int NodesCount = 1e7;
 // const int NodesCount = 1e5;
-// const int NodesCount = 1e4;
-const int NodesCount = 1e3;
+const int NodesCount = 1e4;
+// const int NodesCount = 1e3;
 // const int NodesCount = 3e2;
 // const int NodesCount = 12;
 
@@ -49,7 +50,8 @@ const int hist_width = 30;
 const int hist_height = 16;
 
 // Размер выборки оконечных узлов для частичного распределения
-const int EndNodesCount = 550; // как для измерений (малые выборки)
+const int EndNodesCount = 500; // как для измерений (малые выборки)
+// const int EndNodesCount = 5000; // как для измерений (большая выборка) — нет качественных отличий от 550
 
 class distProperties
 {
@@ -172,6 +174,7 @@ public:
 	{
 		for(int y = max_y; y >=0; --y)
 		{
+			out << "# ";
 			for (int x=0; x < hist_width; ++x)
 			{
 				out << hc[x][y];
@@ -182,12 +185,13 @@ public:
 	
 	void printMoments(ostream &out) const
 	{
-		out << setprecision(2) << "mean = " << zmean << "\tstd = " << zstd << "\tskewness = " << zskewness << "\tkurtosis-3 = " << zkurtosis << endl;
+		out << setprecision(2) << "# mean = " << zmean << "\tstd = " << zstd << "\tskewness = " << zskewness << "\tkurtosis-3 = " << zkurtosis << endl;
 		
 	}
 	
-	void printValues(ostream &out, const ulong* counterDistances, int n, ulong infDistance) 
+	void printValues(ostream &out, const ulong* counterDistances, int n, ulong infDistance, const char *title) 
 	{
+		out << title << " = [" << endl;
 		//for (int i = 1; i < n - 1; i++) {
 		//	if (counterDistances[i] > 0)
 		// внутренние нули пишем!!!
@@ -196,7 +200,8 @@ public:
 		
 				out << i << " " << counterDistances[i] << endl;
 		}
-		out << "infPath " << infDistance;		
+		out << "];" << endl;
+		out << "# infPath " << infDistance;		
 	}
 	
 };

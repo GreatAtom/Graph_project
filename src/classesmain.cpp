@@ -183,7 +183,7 @@ int main(int argc, char* argv[]) {
 	
 	const int uniq_id = time(nullptr);
 	sprintf(graph_filename, "graph_n%d_%s_%d_%d_id%d.txt", n, G.title(), minConnectionCount, maxConnectionCount, uniq_id);
-	sprintf(graph_paths_filename, "graph_n%d_%s_%d_%d_id%d_ch.txt", n, G.title(), minConnectionCount, maxConnectionCount, uniq_id);
+	sprintf(graph_paths_filename, "graph_n%d_%s_%d_%d_id%d_ch.m", n, G.title(), minConnectionCount, maxConnectionCount, uniq_id);
 	
 	
 	/* запись графа в файл */
@@ -220,8 +220,9 @@ int main(int argc, char* argv[]) {
 	
 	/* запись распределения путей от кол-ва в файл */
 	out.open(graph_paths_filename);
+	out << "# " << graph_paths_filename << endl;
 	
-	props.printValues(out, counterDistances, n, infDistance);
+	props.printValues(out, counterDistances, n, infDistance, "xz");
         out << endl;
 	props.printHist(out);
 	props.printMoments(out);
@@ -238,7 +239,7 @@ if (NodesCount > EndNodesCount)
 	
 	//out.open("graph_ch.txt", ios_base::ate);
 
-	for (k = 0; k < 3; ++k)
+	for (k = 0; k < 8; ++k)
 	{
 		fill_n(counterDistances, n - 1, 0); // заполняем 0
 		infDistance = 0;
@@ -270,9 +271,13 @@ if (NodesCount > EndNodesCount)
 		cout << "infPath = " << infDistance << " ";
 		props.printMoments(cout);
 
-		out << endl << endl << "root " << i << endl;
+		out << endl << endl << "# root " << i << " endnodes " << endNodes.size() << endl;
+
+
+		char s[80];
+		sprintf(s, "xz%d", k);
 		
-		props.printValues(out, counterDistances, n, infDistance);
+		props.printValues(out, counterDistances, n, infDistance, s);
 		out << endl;
 		props.printHist(out);
 		props.printMoments(out);
