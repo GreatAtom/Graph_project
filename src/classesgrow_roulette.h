@@ -177,7 +177,13 @@ public:
 			}
 		}    
 		return imax-1; // а сюда мы не дойдём
-	} // rouletteInvSelect  	
+	} // rouletteInvSelect
+	
+	// Равномерно-случайный выбор
+	int randSelect() const
+	{
+		return rand() * nodesDeg.size() / (RAND_MAX + 1.0);
+	} // randSelect  	
 	
 	// Выбор оконечного узла (пользователя, поэтому, вероятно, с минимальной степенью)
 	virtual int selectEndNode() const
@@ -455,7 +461,7 @@ public:
 
 // Составной граф
 // template<int minConnectionCount, int maxConnectionCount>
-class TCombinedGraph: TGrowingNetworkBA
+class TCombinedGraph: public TGrowingNetworkBA
 {
 public:
 	virtual const char* title()
@@ -707,6 +713,8 @@ public:
         int fv = externgraph[g][ex].farVertex + subGraphShift[fg];
         
         graph[lv].push_back(fv);              
+// 			graph[fv].push_back(lv);   // и обратная связь тоже должна быть!          
+// 	нет, обратная соответствует другому элементу externgraph
       }; // цикл по внешним связям подграфа g       
     
     }; // цикл по подграфам     
@@ -757,3 +765,266 @@ public:
 
 
 }; //TCombinedGraph
+
+
+
+
+
+class TCombinedGraphBa2: public TGrowingNetworkBA
+{
+public:
+	virtual const char* title()
+	{
+		return "pfb";
+	}	
+private:
+	vector<vector<TVertexNumber>> *pexportedGraph;
+	
+protected:
+	vector<TSolidGraph> subGraphs;
+	int totalVerticesCount;
+
+public:
+	TCombinedGraphBa2()
+	{
+		totalVerticesCount = 0;
+		pexportedGraph = NULL;
+	}
+
+	// Общее число вершин во всех подграфах *************************************
+	int verticesCount() const
+	{
+		return totalVerticesCount;
+	}
+
+	// Число подграфов **********************************************************
+	int subGrapsCount() const
+	{
+		return subGraphs.size();
+	}
+  
+  
+	// Отладочная печать ********************************************************
+	void print(const char *title, int LogLevel = 0, char newln = '\n') const
+	{
+		int graphsCount = subGrapsCount(), g = 0;
+
+		cout <<title << ": subGrapsCount = " << graphsCount << "; vert. count = " << totalVerticesCount << newln;
+
+		if (LogLevel < 1)
+			return;
+		for(g = 0; g < graphsCount; ++g)
+		{
+			subGraphs[g].print("^", LogLevel);
+		};  
+	}  // print
+
+  
+	// Добавление нового подграфа ***********************************************
+	void addSubGraph()
+	{
+		TSolidGraph g;
+		int gVerticesCount = g.init();
+
+
+		subGraphs.push_back(g);
+		totalVerticesCount += gVerticesCount;
+
+		addNode();
+	}
+	
+	void addVertex()
+	{
+		// Вероятность образования нового подграфа (ненормированная!)
+		int subGraphCreationWeight = 2 ; //verticesCount() / 4 + 2;  
+
+		int rouletteMax = verticesCount() + subGraphCreationWeight;
+		int rouletteValue = rand() % rouletteMax;
+
+		int imax = subGrapsCount();
+		int rouletteSector = 0;
+		for(int i = 0; i < imax; ++i)
+		{
+			rouletteSector += subGraphs[i].nodesCount();   // (*)
+			if (rouletteValue < rouletteSector)
+			{
+				subGraphs[i].addNode();
+				++totalVerticesCount;
+				//return 1;
+				return;
+			}      
+		}
+
+		addSubGraph();    
+	} // addVertex
+
+
+	// Рост графа
+	int grow(int maxVertices)
+	{
+		print("TCombinedGraph::grow start", 0);
+
+		init();
+		// Рост подграфов
+		addSubGraph();
+		while (verticesCount() < maxVertices)
+			addVertex();
+
+
+	// Соединение подграфов отдельно не выполняется. Используются связи БА
+	}
+  
+  
+	// Упаковка выращенного графа в массив для расчёта длин *********************
+	int exportToPlain(vector<vector<TVertexNumber>> &graph) 
+	{
+		int graphsCount = subGrapsCount(), g = 0;
+		int currentSubGraphShift = 0;    
+		vector<int> subGraphShift;
+
+		// 
+		for(g = 0; g < graphsCount; ++g)
+		{
+			subGraphShift.push_back(currentSubGraphShift);
+			currentSubGraphShift += subGraphs[g].nodesCount();
+		};   
+
+		graph.clear();
+
+		for(g = 0; g < graphsCount; ++g)
+		{
+			currentSubGraphShift = subGraphShift[g];
+
+			int vCount = subGraphs[g].nodesCount();
+			for(int v = 0; v < vCount; ++v)
+			{
+				vector<TVertexNumber> vAdjacentGlobal;
+				vector<TVertexNumber> vAdjacentLocal = subGraphs[g].AdjacencyMatrix()[v];
+
+				int imax = vAdjacentLocal.size();
+				for(int i = 0; i < imax; ++i)
+				{
+					vAdjacentGlobal.push_back(vAdjacentLocal[i] + currentSubGraphShift);
+				}
+
+				graph.push_back(vAdjacentGlobal);
+
+			}; // цикл по вершинам подграфа g 
+
+			int exCount = adjMatrix[g].size(); // количество внешних связей g
+			for(int ex = 0; ex < exCount; ++ex)
+			{
+				// Так как мы не знаем, это связь «из» или «в», выбор вершины случайный
+				int lv = subGraphs[g].randSelect() + subGraphShift[g];
+				int fg = adjMatrix[g][ex];
+				int fv = subGraphs[fg].randSelect() + subGraphShift[fg];
+
+				graph[lv].push_back(fv);              
+				//graph[fv].push_back(lv);              
+			}; // цикл по внешним связям подграфа g       
+
+		}; // цикл по подграфам     
+
+		pexportedGraph = &graph;
+
+	} // упаковка
+
+	
+	// Выбор оконечного узла (пользователя, поэтому, вероятно, с минимальной степенью)
+	virtual int selectEndNode() const
+	{
+		if (!pexportedGraph)
+		{
+			cout << "call exportToPlain()!!!" << endl;
+			return rand() % totalVerticesCount;
+		}
+		
+		int imax = pexportedGraph->size();
+
+		double rouletteMax = 0;
+		for(int i = 0; i < imax; ++i)
+		{
+			auto ideg = (*pexportedGraph)[i].size();
+			if (ideg > 0)
+				rouletteMax += 100.0/ideg;
+  
+		}   		
+		
+		double rouletteValue = rand() * rouletteMax / (RAND_MAX + 1.0);
+		
+		int rouletteSector = 0;
+		for(int i = 0; i < imax; ++i)
+		{
+			auto ideg = (*pexportedGraph)[i].size();
+			if (ideg > 0)
+			{
+				rouletteSector += 100.0/ideg;
+				if (rouletteValue < rouletteSector)
+				{
+					return i;
+				}      
+			}
+		}    
+		return imax-1; // а сюда мы не дойдём	
+		
+	}
+
+
+}; //TCombinedGraphBa2
+
+
+
+
+
+
+
+
+class TCombinedGraphWithBigKernel: public TCombinedGraph
+{
+public:	
+	virtual const char* title()
+	{
+		return "pfk";
+
+	}	
+	
+	// Рост графа
+	int grow(int maxVertices)
+	{
+		print("TCombinedGraph::grow start", 0);
+
+		init();
+		const int initVertices = 32;
+		// Рост подграфов
+		addSubGraph();
+		while (verticesCount() < initVertices)
+		{
+			subGraphs[0].addNode();
+			++totalVerticesCount;
+		}    					
+
+		while (verticesCount() < maxVertices)
+			addVertex();
+
+		print("TCombinedGraph::grow ex", 0);
+
+		// Соединение подграфов
+		int imax = subGrapsCount();
+
+		// Инициализация списка связей для всех подграфов
+		vector<TConnectionTo> empty;
+		for(int i = 0; i < imax; ++i)
+		{
+			externgraph.push_back(empty);
+		};    
+
+		// Заполнение списка связей
+		for(int i = 1; i < imax; ++i)
+		{
+			int j = selectSubGraphTo(i);      
+			connectSubGraphs(i, subGraphs[i].selectVertexFrom(), j, subGraphs[j].selectVertexTo());   
+		};
+
+		print("TCombinedGraph::grow end", 0);
+	}	
+}; // TCombinedGraphWithBigKernel

@@ -10,33 +10,37 @@ using namespace std;
 
 typedef unsigned int TVertexNumber; // было int
 
-// const int NodesCount = 1e7;
-// const int NodesCount = 1e5;
-const int NodesCount = 1e4;
+const int NodesCount = 1e5;
+// const int NodesCount = 1e4;
 // const int NodesCount = 1e3;
 // const int NodesCount = 3e2;
 // const int NodesCount = 12;
 
-const int minConnectionCount = 1;
-//  const int minConnectionCount = 2;
-// const int maxConnectionCount = 32;
+// const int minConnectionCount = 1;
+ const int minConnectionCount = 4;
+// const int maxConnectionCount = 48;
 // const int maxConnectionCount = 256;
 //const int maxConnectionCount = 8;
 const int maxConnectionCount = INT_MAX;
 
 // const int startDel = 128;
 const int startDel = 64;
-const double pDel = 0.4;
+const double pDel = 0.3;
 // const double pAdd = 0.8;
 
 
 class TGrowingNetworkBA;
 class TGrowingNetworkLeafs; // присоединение по обратному правилу в ?50% случаев
 class TNetworkWithDelete;
-class TCombinedGraph;	// составной граф из графов
+class TCombinedGraph;	// составной граф из графов, межподграфные связи образуются пропорционально количеству узлов
+class TCombinedGraphWithBigKernel;	// составной граф из графов с крупным ядром
+// class TCombinedGraphBa2;	// составной граф из графов, межподграфные связи — по БА, а не по количеству узлов 
 
 typedef TGrowingNetworkBA TCurrentModel;
-
+// typedef TNetworkWithDelete TCurrentModel;
+// typedef TCombinedGraph TCurrentModel;
+// typedef TCombinedGraphWithBigKernel TCurrentModel; (*)
+// typedef TCombinedGraphBa2 TCurrentModel; не то
 
 
 
