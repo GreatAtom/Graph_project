@@ -55,6 +55,9 @@ public:
 	{
 		return "ba";
 	}
+	virtual void print_properties_m(ofstream &out)
+	{
+	}
 	
 	// Вектор векторов смежности ************************************************
 	const vector<vector<TVertexNumber>>& AdjacencyMatrix() const
@@ -247,7 +250,11 @@ class TGrowingNetworkBA: public TGrowingNetwork
 public:
 	virtual const char* title()
 	{
-		return "ba";
+		// return "ba";
+		// 98 — исторически сложившаяся сигнатура. Смысла не имеет. И не год.
+		// Octave читает начало строки ba как 98 (но это и не ASCII-код).
+		// Но для единообразия тут надо число, поэтому 98.
+		return "ba_98";
 	}
 	
 }; // TGrowingNetworkBA
@@ -293,13 +300,18 @@ class TNetworkWithDelete: public
 TGrowingNetworkBA
 // TGrowingNetworkLeafs
 {
+protected:	
 	vector<TVertexNumber> deadNodes;
 
 
 public:
 	virtual const char* title()
 	{
-		return "del";
+		static char s[256];
+		//sprintf(s, "del_%g", pDel); на точку octave ругается
+		sprintf(s, "del_%d", (int)(pDel*1000+0.5));
+		//return "del";
+		return s;
 	}
 	
 protected:	
@@ -413,11 +425,51 @@ public:
 		}
 
 	}	
-};
+}; // TNetworkWithDelete
 
 
 
 
+class TNetworkWitExterminate: public TNetworkWithDelete
+{
+
+
+public:
+	virtual const char* title()
+	{
+		return "delex";
+	}
+	
+protected:	
+	// Удаление узла
+	void deleteNode()
+	{
+		//int i = rand() % adjMatrix.size();
+		int i = rouletteInvSelect();
+		//int i = rouletteSelect();
+		if (0 == nodesDeg[i])
+			return;
+		
+		deadNodes.push_back(i);
+		sumDeg -= 2*nodesDeg[i];
+		nodesDeg[i] = 0;
+		
+		int i_deg = adjMatrix[i].size();	
+				
+		// Удаление связей вместе с узлом
+		for (auto k = i_deg-1; k >= 0; --k) 
+		{
+			int j = adjMatrix[i][k];
+			adjMatrix[i].pop_back();
+			vector<TVertexNumber> &adjCurrent = adjMatrix[j];
+
+			adjCurrent.erase(remove(adjCurrent.begin(), adjCurrent.end(), i), adjCurrent.end()); 				
+
+		}	
+	}
+
+
+}; // TNetworkWitExterminate
 
 
 
@@ -527,6 +579,11 @@ public:
     };  
    }  // print
 
+	void print_properties_m(ofstream &out)
+	{
+		out << "subGrapsCount = " << subGrapsCount() << ";  vertCount = " << totalVerticesCount << ";" << endl;
+		
+	}   
   
   // Добавление нового подграфа ***********************************************
   void addSubGraph()
@@ -540,7 +597,7 @@ public:
     
     addNode();
     
-    g.print("TCombinedGraph::addSubGraph", 0);
+    // g.print("TCombinedGraph::addSubGraph", 0);
   }
   
 // 	virtual void doAfterAddNode(int i)
@@ -556,7 +613,8 @@ public:
 
     // Вероятность образования нового подграфа (ненормированная!)
     int subGraphCreationWeight = 2 ; //verticesCount() / 4 + 2;  
-    
+    //int subGraphCreationWeight = 1; // плохо получается
+   
     int rouletteMax = verticesCount() + subGraphCreationWeight;
     int rouletteValue = rand() % rouletteMax;
 
@@ -984,20 +1042,20 @@ class TCombinedGraphWithBigKernel: public TCombinedGraph
 public:	
 	virtual const char* title()
 	{
-		return "pfk";
-
+		//return "pfk";
+		
+		static char s[256];
+		sprintf(s, "pfk_%d", kernelVertices);
+		return s;
 	}	
 	
 	// Рост графа
 	int grow(int maxVertices)
 	{
-		print("TCombinedGraph::grow start", 0);
-
 		init();
-		const int initVertices = 32;
 		// Рост подграфов
 		addSubGraph();
-		while (verticesCount() < initVertices)
+		while (verticesCount() < kernelVertices)
 		{
 			subGraphs[0].addNode();
 			++totalVerticesCount;
@@ -1005,8 +1063,6 @@ public:
 
 		while (verticesCount() < maxVertices)
 			addVertex();
-
-		print("TCombinedGraph::grow ex", 0);
 
 		// Соединение подграфов
 		int imax = subGrapsCount();
@@ -1024,7 +1080,6 @@ public:
 			int j = selectSubGraphTo(i);      
 			connectSubGraphs(i, subGraphs[i].selectVertexFrom(), j, subGraphs[j].selectVertexTo());   
 		};
-
-		print("TCombinedGraph::grow end", 0);
+		print("TCombinedGraphWithBigKernel::grow end", 0);
 	}	
 }; // TCombinedGraphWithBigKernel

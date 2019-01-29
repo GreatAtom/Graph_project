@@ -63,11 +63,12 @@ uint findShortestPaths(uint s) {
 		}
 	}
 
-#pragma omp parallel shared(counterDistances, infPath) 
+#pragma omp parallel shared(counterDistances, infDistance) 
 	{
 #pragma omp  for private(v) // перенос дистанций от вершины с номером s в общий массив или перем. infDistance (нету пути до вершины)
-		for (v = 0; v < n; ++v) {
-			if (v > s) // фиксируем путь только от меньшей вершины к большей, чтобы не посчитать один путь дважды (например от 1 к 0 и от 0 к 1)
+		//for (v = 0; v < n; ++v) {
+		//	if (v > s) // фиксируем путь только от меньшей вершины к большей, чтобы не посчитать один путь дважды (например от 1 к 0 и от 0 к 1)
+		for (v = s+1; v < n; ++v) {
 			{
 				if (dist[v] != INF) {
 #pragma omp atomic	
@@ -84,6 +85,7 @@ uint findShortestPaths(uint s) {
 	delete[] dist;
 	delete[] parent;
 
+	cout << " " << s;
 	return 0;
 }
 
@@ -127,7 +129,7 @@ uint findShortestPathsToEndNodes(uint s, unordered_set<TVertexNumber> endNodes) 
 		}
 	}
 
-#pragma omp parallel shared(counterDistances, infPath) 
+#pragma omp parallel shared(counterDistances, infDistance) 
 	{
 #pragma omp  for private(v) // перенос дистанций от вершины с номером s в общий массив или перем. infDistance (нету пути до вершины)
 		for (v = 0; v < n; ++v) {
@@ -199,10 +201,15 @@ int main(int argc, char* argv[]) {
 	cout << "The model has been writen." << endl << endl;
 	
 
+	auto i = 0; // создание для omp
+	distProperties props;
+	
+
+	
+	
 	/* обход графа */
 	auto start = chrono::steady_clock::now();
-	auto i = 0; // создание для omp
-#pragma omp parallel shared(counterDistances, infPath)
+#pragma omp parallel shared(counterDistances, infDistance)
 	{
 #pragma omp  for private(i)
 		for (i = 0; i < graph.size() - 1; i++) // -1, с. м. функцию обхода графа (например от 1 к 0 и от 0 к 1)
@@ -212,7 +219,6 @@ int main(int argc, char* argv[]) {
 	}
 	
 	
-	distProperties props;
 	// Расчёт характеристик распределения
 	props.calcProperties(counterDistances, n-1);
 	
@@ -222,6 +228,8 @@ int main(int argc, char* argv[]) {
 	out.open(graph_paths_filename);
 	out << "# " << graph_paths_filename << endl;
 	
+	G.print_properties_m(out);
+	
 	props.printValues(out, counterDistances, n, infDistance, "xz");
         out << endl;
 	props.printHist(out);
@@ -230,9 +238,14 @@ int main(int argc, char* argv[]) {
 	cout << "The paths have been found." << endl;
 
 	props.printHist(cout);
-	cout << "infPath = " << infDistance << " ";
+	cout << "infDistance = " << infDistance << " ";
 	props.printMoments(cout);
+	
+	// ^^^ полное распределение
         
+	
+
+	
 	
 if (NodesCount > EndNodesCount)
 {
@@ -268,7 +281,7 @@ if (NodesCount > EndNodesCount)
 		props.calcProperties(counterDistances, n);
 		cout << endl << "root " << i << " endnodes " << endNodes.size() << endl;
 		props.printHist(cout);
-		cout << "infPath = " << infDistance << " ";
+		cout << "infDistance = " << infDistance << " ";
 		props.printMoments(cout);
 
 		out << endl << endl << "# root " << i << " endnodes " << endNodes.size() << endl;
@@ -285,7 +298,13 @@ if (NodesCount > EndNodesCount)
 	}
 	
 } // частичные распределения
-
+	
+	
+		
+	
+	
+	
+	
 	out.close();
 
 	

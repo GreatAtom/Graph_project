@@ -5,42 +5,76 @@
 #include <string>
 #include <algorithm>
 #include <climits>
+#include <cmath>
 
 using namespace std;
-
 typedef unsigned int TVertexNumber; // было int
 
-const int NodesCount = 1e5;
-// const int NodesCount = 1e4;
-// const int NodesCount = 1e3;
-// const int NodesCount = 3e2;
-// const int NodesCount = 12;
+// ****************************************************************************
+// Модели для дерева (minConnectionCount = 1) итоговые
 
-// const int minConnectionCount = 1;
- const int minConnectionCount = 4;
-// const int maxConnectionCount = 48;
+class TGrowingNetworkBA;	// Барабаши-Альберт (опционально — с ограничением степени вершины)
+class TNetworkWithDelete;	// удаление узла с передачей связей
+class TCombinedGraphWithBigKernel;	// составной граф из графов с крупным ядром
+
+// Выбор текущей модели
+
+// typedef TGrowingNetworkBA TCurrentModel;
+// typedef TNetworkWithDelete TCurrentModel;
+typedef TCombinedGraphWithBigKernel TCurrentModel; 
+
+// ****************************************************************************
+
+// Параметры моделирования: все модели
+
+const int NodesCount = 1e6;
+//const int NodesCount = 1e5;
+//const int NodesCount = 1e4;
+//const int NodesCount = 1e3;
+
+const int minConnectionCount = 1;
+//const int minConnectionCount = 2;
+//const int minConnectionCount = 4;
+
+// const int maxConnectionCount = 32;
 // const int maxConnectionCount = 256;
-//const int maxConnectionCount = 8;
 const int maxConnectionCount = INT_MAX;
+
+
+// Параметры моделирования: TCombinedGraphWithBigKernel
+
+//const int kernelVertices = 16;
+const int kernelVertices = 32;
+//const int kernelVertices = 256;
+
+
+// Параметры моделирования: TNetworkWithDelete / TNetworkWitExterminate
 
 // const int startDel = 128;
 const int startDel = 64;
-const double pDel = 0.3;
+const double pDel = 0.2;
+//const double pDel = 0.3;
 // const double pAdd = 0.8;
 
+// ****************************************************************************
 
-class TGrowingNetworkBA;
-class TGrowingNetworkLeafs; // присоединение по обратному правилу в ?50% случаев
-class TNetworkWithDelete;
-class TCombinedGraph;	// составной граф из графов, межподграфные связи образуются пропорционально количеству узлов
-class TCombinedGraphWithBigKernel;	// составной граф из графов с крупным ядром
-// class TCombinedGraphBa2;	// составной граф из графов, межподграфные связи — по БА, а не по количеству узлов 
 
-typedef TGrowingNetworkBA TCurrentModel;
-// typedef TNetworkWithDelete TCurrentModel;
-// typedef TCombinedGraph TCurrentModel;
-// typedef TCombinedGraphWithBigKernel TCurrentModel; (*)
-// typedef TCombinedGraphBa2 TCurrentModel; не то
+// Список моделей, включая неудачные
+// class TGrowingNetworkBA;
+// // class TGrowingNetworkLeafs; // присоединение по обратному правилу в ?50% случаев
+// class TNetworkWithDelete;	// с передачей связей
+// class TNetworkWitExterminate;	// с удалением связей (не подходит для моделирования дерева)
+// // class TCombinedGraph;	// составной граф из графов, межподграфные связи образуются пропорционально количеству узлов
+// class TCombinedGraphWithBigKernel;	// составной граф из графов с крупным ядром
+// // class TCombinedGraphBa2;	// составной граф из графов, межподграфные связи — по БА, а не по количеству узлов 
+// 
+// // typedef TGrowingNetworkBA TCurrentModel;
+// // typedef TNetworkWithDelete TCurrentModel;
+// // typedef TNetworkWitExterminate TCurrentModel;
+// 
+// // // typedef TCombinedGraph TCurrentModel; не то
+// typedef TCombinedGraphWithBigKernel TCurrentModel; // (*)
+// // // typedef TCombinedGraphBa2 TCurrentModel; не то
 
 
 
