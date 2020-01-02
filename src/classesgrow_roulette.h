@@ -57,6 +57,7 @@ public:
 	}
 	virtual void print_properties_m(ofstream &out)
 	{
+		out << "vertCount = " << nodesCount() << ";" << endl;
 	}
 	
 	// Вектор векторов смежности ************************************************
@@ -581,8 +582,14 @@ public:
 
 	void print_properties_m(ofstream &out)
 	{
-		out << "subGrapsCount = " << subGrapsCount() << ";  vertCount = " << totalVerticesCount << ";" << endl;
-		
+        int graphsCount = subGrapsCount(), g = 0;
+		out << "subGrapsCount = " << graphsCount << ";  vertCount = " << totalVerticesCount << ";" << endl;
+		out << "subGrapsVerts = [ ";
+        for(g = 0; g < graphsCount; ++g)
+        {
+            out << subGraphs[g].nodesCount() << " ";
+        }; 		
+		out << "];" << endl;
 	}   
   
   // Добавление нового подграфа ***********************************************
