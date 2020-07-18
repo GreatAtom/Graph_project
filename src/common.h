@@ -27,7 +27,8 @@ typedef TCombinedGraphWithBigKernel TCurrentModel;
 
 // Параметры моделирования: все модели
 
-const int NodesCount = 1e6;
+const int NodesCount = 1e7;
+//const int NodesCount = 1e6;
 //const int NodesCount = 1e5;
 //const int NodesCount = 1e4;
 //const int NodesCount = 1e3;
@@ -52,8 +53,9 @@ const int kernelVertices = 32;
 
 // const int startDel = 128;
 const int startDel = 64;
-const double pDel = 0.2;
-//const double pDel = 0.3;
+// const double pDel = 0.1;
+//const double pDel = 0.2;
+const double pDel = 0.3;
 // const double pAdd = 0.8;
 
 // ****************************************************************************
